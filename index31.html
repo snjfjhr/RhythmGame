@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>リズムゲーム</title>
+<style>
+  body { margin:0; background:#000; color:#fff; font-family:sans-serif; text-align:center; }
+  canvas { background:#111; display:block; margin:0 auto; touch-action:none; }
+  #startBtn, #retryBtn {
+    font-size:20px; padding:10px 20px; margin-top:20px; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<h1>リズムゲーム</h1>
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+<button id="startBtn">Start</button>
+<button id="retryBtn" style="display:none;">Retry</button>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const startBtn = document.getElementById("startBtn");
+const retryBtn = document.getElementById("retryBtn");
+
+let notes = [];
+let score = 0;
+let gameActive = false;
+let laneWidth = canvas.width/2;
+let redLineY = canvas.height-100;
+
+// ノーツを作成
+function createNotes(){
+  notes = [];
+  for(let i=0;i<20;i++){
+    notes.push({
+      lane: Math.floor(Math.random()*2),
+      y: -i*150
+    });
+  }
+}
+
+// ゲーム開始
+function startGame(){
+  score = 0;
+  createNotes();
+  gameActive = true;
+  startBtn.style.display="none";
+  retryBtn.style.display="none";
+  requestAnimationFrame(gameLoop);
+}
+
+// 判定処理
+function judge(lane){
+  let target = notes.find(n=>n.lane===lane && Math.abs(n.y-redLineY)<30);
+  if(target){
+    score++;
+    notes.splice(notes.indexOf(target),1);
+  }
+}
+
+// キーボード操作
+document.addEventListener("keydown",e=>{
+  if(e.key=="f"||e.key=="F") judge(0);
+  if(e.key=="j"||e.key=="J") judge(1);
+});
+
+// タップ/クリック操作（レーン上ならどこでも判定）
+function handleTap(clientX){
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const x = (clientX - rect.left) * scaleX;
+  const lane = x < laneWidth ? 0 : 1;
+  judge(lane);
+}
+
+// スマホ/PC両対応
+canvas.addEventListener("pointerdown", e=>{
+  if(!gameActive) return;
+  handleTap(e.clientX);
+});
+
+// ゲームループ
+function gameLoop(){
+  if(!gameActive) return;
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // レーン描画
+  ctx.fillStyle="#333";
+  ctx.fillRect(0,0,laneWidth,canvas.height);
+  ctx.fillRect(laneWidth,0,laneWidth,canvas.height);
+
+  // 赤ライン
+  ctx.strokeStyle="red";
+  ctx.beginPath();
+  ctx.moveTo(0,redLineY);
+  ctx.lineTo(canvas.width,redLineY);
+  ctx.stroke();
+
+  // ノーツ描画
+  ctx.fillStyle="cyan";
+  for(let n of notes){
+    ctx.fillRect(n.lane*laneWidth+20,n.y,laneWidth-40,20);
+    n.y+=3;
+  }
+
+  // スコア
+  ctx.fillStyle="white";
+  ctx.font="20px sans-serif";
+  ctx.fillText("Score: "+score,10,30);
+
+  // 終了判定
+  if(notes.length===0){
+    gameActive=false;
+    retryBtn.style.display="inline";
+    return;
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+startBtn.onclick=startGame;
+retryBtn.onclick=startGame;
+</script>
+</body>
+</html>
